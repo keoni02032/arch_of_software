@@ -1,0 +1,168 @@
+version: '2.1'
+
+services:
+  confdb-node-1:
+    build:
+      context: mariadb
+      dockerfile: Dockerfile
+    container_name: confdb-node-1
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cnfdb
+      MYSQL_USER: cnfuser
+      MYSQL_PASSWORD: cnfuser
+      MYSQL_ROOT_PASSWORD: '1'
+    command: >
+      --sql-mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'
+      --general-log=ON
+      --log-queries-not-using-indexes=ON
+    networks:
+      - cnf-network
+    ports:
+      - 3360:3306
+    healthcheck:
+      test: "/usr/bin/mysql --user=cnfuser --password=cnfuser --execute \"SHOW DATABASES;\""
+      timeout: 20s
+      retries: 20
+    volumes:
+      - confdb-node-1-data:/var/lib/mysql
+
+  confdb-node-2:
+    build:
+      context: mariadb
+      dockerfile: Dockerfile
+    container_name: confdb-node-2
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: cnfdb
+      MYSQL_USER: cnfuser
+      MYSQL_PASSWORD: cnfuser
+      MYSQL_ROOT_PASSWORD: '1'
+    command: >
+      --sql-mode='STRICT_TRANS_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION'
+      --general-log=ON
+      --log-queries-not-using-indexes=ON
+    networks:
+      - cnf-network
+    ports:
+      - 3361:3306
+    healthcheck:
+      test: "/usr/bin/mysql --user=cnfuser --password=cnfuser --execute \"SHOW DATABASES;\""
+      timeout: 20s
+      retries: 20
+    volumes:
+      - confdb-node-2-data:/var/lib/mysql
+
+  proxysql:
+    build:
+      context: proxysql
+      dockerfile: Dockerfile
+    container_name: proxysql
+    command: >
+      --initial
+    volumes:
+      - proxysql-data:/var/lib/proxysql
+    healthcheck:
+      test: "/usr/bin/mysql --user=cnfuser --password=cnfuser --execute \"SHOW DATABASES;\""
+      timeout: 20s
+      retries: 5
+    networks:
+      - cnf-network
+    ports:
+      - "6033:6033"
+      - "6032:6032"
+    depends_on:
+      confdb-node-1:
+        condition: service_healthy
+      confdb-node-2:
+        condition: service_healthy
+  
+  cache:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning 
+    networks:
+      - cnf-network
+    volumes: 
+      - cache:/data
+
+  user_service:
+    build:
+      context: UserService
+      dockerfile: Dockerfile
+    container_name: user_service
+    restart: unless-stopped
+    environment:
+      - DB_HOST=proxysql
+      - DB_PORT=6033
+      - DB_LOGIN=cnfuser
+      - DB_PASSWORD=cnfuser
+      - DB_DATABASE=cnfdb
+      - CACHE=cache:6379
+    ports:
+      - 8080:8080
+    networks:
+      - cnf-network
+    depends_on:
+      - cache
+      - proxysql
+      - confdb-node-1
+      - confdb-node-2
+      
+    
+  conference_service:
+    build:
+      context: ConferenceService
+      dockerfile: Dockerfile
+    container_name: conference_service
+    restart: unless-stopped
+    environment:
+      - SERVICE_HOST=user_service
+      - DB_HOST=proxysql
+      - DB_PORT=6033
+      - DB_LOGIN=cnfuser
+      - DB_PASSWORD=cnfuser
+      - DB_DATABASE=cnfdb
+      - CACHE=cache:6379
+    ports:
+      - 8081:8081
+    networks:
+      - cnf-network
+    depends_on:
+      - proxysql
+      - cache
+
+  report_service:
+    build:
+      context: ReportService
+      dockerfile: Dockerfile
+    container_name: report_service
+    restart: unless-stopped
+    environment:
+      - SERVICE_HOST=user_service
+      - DB_HOST=proxysql
+      - DB_PORT=6033
+      - DB_LOGIN=cnfuser
+      - DB_PASSWORD=cnfuser
+      - DB_DATABASE=cnfdb
+      - CACHE=cache:6379
+    ports:
+      - 8082:8082
+    networks:
+      - cnf-network
+    depends_on:
+      - proxysql
+      - cache
+
+volumes:
+  confdb-node-1-data:
+  confdb-node-2-data:
+  proxysql-data:
+  cache:
+  
+networks:
+  cnf-network:
+    driver: "bridge"
+    external: false

@@ -1,0 +1,237 @@
+openapi: "3.0.0"
+info:
+    version: "1.0.0"
+    title: "API ConferenceService"
+    description: API для работы с конференциями
+servers:
+    - url: http://localhost:8081
+      description: Conference server
+paths:
+    /add_category:
+        post:
+            summary: Добавление категории
+            parameters:
+                - name: name_of_category
+                  description: Название категории
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: The category was created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/category"
+                404:
+                    description: The category was not created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                500:
+                    description: Unexpected error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /add_conf:
+        post:
+            summary: Добавление конференции
+            parameters:
+                - name: name_conf
+                  description: Название конференции
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+                - name: organizer_id
+                  description: Организатор конференции
+                  in: query
+                  required: true
+                  schema:
+                      type: integer
+                - name: category_id
+                  description: Категория конференции
+                  in: query
+                  required: true
+                  schema:
+                      type: integer
+                - name: description
+                  description: Описание конференции
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+                - name: date_of_conf
+                  description: Дата конференции
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: The conference was added
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/conference"
+                404:
+                    description: Error with conference adding
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                500:
+                    description: Unexpected error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /read_all_reports_from_conf:
+        get:
+            parameters:
+                - name: conf_id
+                  description: Идентификатор конференции
+                  in: query
+                  required: true
+                  schema:
+                      type: integer
+            summary: Получить список всех докладов конференции
+            responses:
+                "200":
+                    description: All reports of conference were printed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/conferences"
+                404:
+                    description: Error with printing conferences
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                500:
+                    description: Unexpected error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /add_report_to_conf:
+        post:
+            summary: Добавление доклада в конференцию
+            parameters:
+                - name: report_id
+                  description: Уникальный идентификатор доклада
+                  in: query
+                  required: true
+                  schema:
+                      type: integer
+                - name: conf_id
+                  description: Уникальный идентификатор конференции
+                  in: query
+                  required: true
+                  schema:
+                      type: integer
+            responses:
+                "200":
+                    description: The report was added
+                404:
+                    description: Error with report adding
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                500:
+                    description: Unexpected error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+components:
+    schemas:
+        categories:
+            type: array
+            items:
+                $ref: "#/components/schemas/category"
+        category:
+            type: object
+            required:
+                - id
+                - name_of_category
+            properties:
+                id:
+                    type: integer
+                name_of_category:
+                    type: string
+        conferences:
+            type: array
+            items:
+                $ref: "#/components/schemas/conference"
+        conference:
+            type: object
+            required:
+                - id
+                - name_conf
+                - organizer_id
+                - category_id
+                - description
+                - date_of_conf
+            properties:
+                id:
+                    type: integer
+                name_conf:
+                    type: string
+                organizer_id:
+                    type: integer
+                category_id:
+                    type: integer
+                description:
+                    type: string
+                date_of_conf:
+                    type: string
+        report_conferences:
+            type: array
+            items:
+                $ref: "#/components/schemas/report_conference"
+        report_conference:
+            type: object
+            required:
+                - id
+                - name_conf
+                - organizer_id
+                - category_id
+                - description
+                - date_of_conf
+            properties:
+                id:
+                    type: integer
+                name_conf:
+                    type: string
+                organizer_id:
+                    type: integer
+                category_id:
+                    type: integer
+                description:
+                    type: string
+                date_of_conf:
+                    type: string
+        Error:
+            type: object
+            required:
+                - message
+            properties:
+                message:
+                    description: Сообщение о ошибке
+                    type: string
+    securitySchemes:
+        basicAuth:
+            type: http
+            scheme: basic
+security:
+    - basicAuth: []

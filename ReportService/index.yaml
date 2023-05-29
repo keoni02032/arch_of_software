@@ -1,0 +1,160 @@
+openapi: "3.0.0"
+info:
+    version: "1.0.0"
+    title: "API ReportService"
+    description: API для работы с докладами
+servers:
+    - url: http://localhost:8082
+      description: Report server
+paths:
+    /add_report:
+        post:
+            summary: Добавление доклада
+            parameters:
+                - name: name_report
+                  description: Название доклада
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+                - name: author_id
+                  description: id пользователя
+                  in: query
+                  required: true
+                  schema:
+                      type: integer
+                - name: annotation
+                  description: Аннотация
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+                - name: text_report
+                  description: Текст доклада
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+                - name: date_creation
+                  description: Дата создания
+                  in: query
+                  required: true
+                  schema:
+                      type: string
+            responses:
+                "200":
+                    description: The report was created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/report"
+                404:
+                    description: The report was not created
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                500:
+                    description: Unexpected error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /search_report:
+        get:
+            summary: Поиск доклада
+            parameters:
+            - name: report_id
+              description: идентификатор доклада
+              in: query
+              required: true
+              schema:
+                $ref: "#/components/schemas/report_id"
+            responses:
+                "200":
+                    description: All conferences were printed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/reports"
+                404:
+                    description: Error with conferences get read
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                500:
+                    description: Unexpected error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+
+    /read_all_reports:
+        get:
+            summary: Вывести все доклады
+            responses:
+                "200":
+                    description: All reports were printed
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/reports"
+                404:
+                    description: Error with conferences get read
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+                500:
+                    description: Unexpected error
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/Error"
+components:
+    schemas:
+        report_id:
+            description: Уникальный идентификатор доклада
+            type: integer
+        reports:
+            type: array
+            items:
+                $ref: "#/components/schemas/report"
+        report:
+            type: object
+            required:
+                - id
+                - name_report
+                - author_id
+                - annotation
+                - text_report
+                - date_creation
+            properties:
+                id:
+                    $ref: "#/components/schemas/report_id"
+                name_report:
+                    type: string
+                author_id:
+                    type: integer
+                annotation:
+                    type: string
+                text_report:
+                    type: string
+                date_creation:
+                    type: string
+        Error:
+            type: object
+            required:
+                - message
+            properties:
+                message:
+                    description: Сообщение о ошибке
+                    type: string
+    securitySchemes:
+        basicAuth:
+            type: http
+            scheme: basic
+security:
+    - basicAuth: []
